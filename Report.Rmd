@@ -1,0 +1,104 @@
+---
+title: 'Peer-graded Assignment: Course Project 1'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("C:/Users/Stefan/Desktop/Data/5.Reproducible_research/Lesson2/CourseProject1/RepData_PeerAssessment1")
+```
+
+## Libraries used in this markdown
+
+```{r}
+library(dplyr)
+library(ggplot2)
+```
+
+## Loading and preprocessing the data
+
+The data is first loaded into R.
+
+```{r}
+
+filename <- "activity.zip"
+dataname <- "activity.csv"
+
+if (!file.exists(dataname)){
+        unzip(filename)
+}
+
+activity <- read.csv(dataname)
+```
+
+## What is mean total number of steps taken per day?
+
+```{r}
+
+sum.act.day <- activity %>% group_by(date) %>% summarise(total_steps = sum(steps, na.rm = TRUE))
+
+gsteps <- ggplot(data= sum.act.day, aes(x = total_steps)) + scale_x_continuous(name = "Total steps by day")+
+                geom_histogram() 
+gsteps
+
+mean(sum.act.day$total_steps)
+median(sum.act.day$total_steps)
+```
+
+## What is the average daily activity pattern?
+
+```{r}
+
+mean.act.5min <- activity %>% group_by(interval) %>% summarise(mean_steps = mean(steps, na.rm = TRUE))
+
+ginterval <- ggplot(data = mean.act.5min, aes(y = mean_steps, x = interval)) + geom_line()
+ginterval
+
+mean.act.5min %>% filter(mean_steps == max(mean_steps)) %>% select(interval) 
+
+```
+
+## Imputing missing values
+
+```{r}
+sum(is.na(activity$steps)) ### number of missing values
+
+mean.act.5min <- activity %>% group_by(interval) %>% summarise(mean_steps = round(mean(steps, na.rm = TRUE)))
+
+activity2 <- left_join(activity, mean.act.5min, by = "interval")
+activity2$steps[is.na(activity2$steps)] <- activity2$mean_steps
+activity2 <- select(activity2, 1:3)
+
+sum.act2.day <- activity2 %>% group_by(date) %>% summarise(total_steps = sum(steps, na.rm = TRUE))
+
+gsteps2 <- ggplot(data= sum.act2.day, aes(x = total_steps)) + geom_histogram()
+gsteps2
+
+mean(sum.act2.day$total_steps)
+median(sum.act2.day$total_steps)
+
+```
+
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+
+activity2$date <- as.Date(as.character(activity2$date), "%Y-%m-%d")
+
+activity2$weekday <- weekdays(activity2$date)
+
+activity2$weekend <- factor(activity2$weekday)
+levels(activity2$weekend) <- list("Weekday" = c("Monday","Tuesday","Wednesday","Thursday","Friday"), 
+                                  "Weekend" = c("Saturday","Sunday"))
+
+mean.act2.week <- activity2 %>% group_by(weekend, interval) %>% summarise(mean_steps = mean(steps, na.rm = TRUE))
+
+gweek <- ggplot(data = mean.act2.week, aes(y = mean_steps, x = interval)) + facet_grid(.~weekend) + scale_y_continuous(name="Average number of steps") + geom_line() + ggtitle("Average number of steps across all intervals by Weekday/Weekend")
+gweek
+```
+
+
+
+mean.act2.week <- activity2 %>% group_by(weekend, interval) %>% summarise(mean_steps = mean(steps, na.rm = TRUE)) 
+
